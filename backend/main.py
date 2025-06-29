@@ -12,6 +12,8 @@ app = FastAPI()
 load_dotenv()
 OMDB_API_KEY = os.getenv("IMDB_API_KEY")
 
+app = FastAPI()
+
 # Enable CORS for all origins (for development)
 app.add_middleware(
     CORSMiddleware,
