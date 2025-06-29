@@ -2,7 +2,15 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from uuid import uuid4
+import os
 import random
+import httpx
+from dotenv import load_dotenv
+
+app = FastAPI()
+
+load_dotenv()
+OMDB_API_KEY = os.getenv("IMDB_API_KEY")
 
 app = FastAPI()
 
@@ -22,10 +30,41 @@ with open("words.txt") as f:
 GAMES = {}
 MAX_WRONG = 6
 
+def clean_title(title: str) -> str:
+    title = title.upper()
+    allowed = set("ABCDEFGHIJKLMNOPQRSTUVWXYZ ")
+    cleaned = ''.join(c for c in title if c in allowed)
+    return ' '.join(cleaned.split())
+
+
+def fetch_random_movie() -> str:
+    """Fetch a random movie title from OMDb or fall back to local words."""
+    if not OMDB_API_KEY:
+        return random.choice(WORDS)
+
+    for _ in range(3):
+        try:
+            page = random.randint(1, 5)
+            resp = httpx.get(
+                f"http://www.omdbapi.com/?apikey={OMDB_API_KEY}&s=movie&type=movie&page={page}",
+                timeout=5,
+            )
+            data = resp.json()
+            results = data.get("Search") or []
+            if results:
+                title = random.choice(results).get("Title", "")
+                cleaned = clean_title(title)
+                if cleaned:
+                    return cleaned
+        except Exception:
+            pass
+    return random.choice(WORDS)
+
 class NewGameResponse(BaseModel):
     gameId: str
     length: int
     maxWrong: int
+    masked: str
 
 class GuessRequest(BaseModel):
     gameId: str
@@ -42,9 +81,10 @@ class GuessResponse(BaseModel):
 @app.post("/api/new-game", response_model=NewGameResponse)
 def new_game():
     game_id = str(uuid4())
-    word = random.choice(WORDS)
+    word = fetch_random_movie()
     GAMES[game_id] = {"word": word, "wrong": 0, "guessed": []}
-    return NewGameResponse(gameId=game_id, length=len(word), maxWrong=MAX_WRONG)
+    masked = ''.join('_' if c != ' ' else ' ' for c in word)
+    return NewGameResponse(gameId=game_id, length=len(word), maxWrong=MAX_WRONG, masked=masked)
 
 @app.post("/api/guess", response_model=GuessResponse)
 def guess(req: GuessRequest):

@@ -15,8 +15,8 @@
       maxWrong: data.maxWrong,
       guessed: [],
       wrongGuesses: 0,
-      revealed: Array(data.length).fill(false),
-      word: Array(data.length).fill('_'),
+      revealed: Array.from(data.masked).map(c => c !== '_'),
+      word: data.masked.split(''),
       gameOver: false,
       won: false
     });
@@ -55,6 +55,7 @@
 </script>
 
 <main>
+  <h2>Guess the Movie Title!</h2>
   <HangmanDrawing wrongGuesses={$game.wrongGuesses}/>
   <WordDisplay length={$game.length} word={$game.word} revealed={$game.revealed}/>
   <Keyboard guessed={$game.guessed} on:guess={handleGuess}/>
