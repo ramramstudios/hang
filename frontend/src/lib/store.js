@@ -7,6 +7,7 @@ export const game = writable({
   guessed: [],
   wrongGuesses: 0,
   revealed: [],
+  word: [],
   gameOver: false,
   won: false
 });
